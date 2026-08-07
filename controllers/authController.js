@@ -162,14 +162,26 @@ exports.verifyOtp = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const token = req.params.token || req.body.token;
+    const token = req.params?.token
+      || req.body?.token
+      || req.body?.resetToken
+      || req.body?.resetPasswordToken
+      || req.query?.token
+      || req.query?.resetToken
+      || req.query?.resetPasswordToken
+      || req.headers['x-reset-token'];
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
     const { password, passwordConfirm } = req.body;
+
+    if (!normalizedToken) {
+      return res.status(400).json({ success: false, message: 'Reset token is required' });
+    }
 
     if (!password || password !== passwordConfirm) {
       return res.status(400).json({ success: false, message: 'Passwords do not match or missing' });
     }
 
-    const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiry: { $gt: new Date() } });
+    const user = await User.findOne({ resetPasswordToken: normalizedToken, resetPasswordExpiry: { $gt: new Date() } });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
 
     if (!user.isVerified || (!user.isActive && !user.forcePasswordChange)) {
