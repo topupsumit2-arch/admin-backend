@@ -196,9 +196,14 @@ exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     const user = await User.findById(req.user._id).select('+password');
+    const requiresCurrentPassword = !req.user?.forcePasswordChange;
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Current password, new password and confirm password are required' });
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirm password are required' });
+    }
+
+    if (requiresCurrentPassword && !currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password is required' });
     }
 
     if (newPassword !== confirmPassword) {
@@ -209,7 +214,7 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long' });
     }
 
-    if (!(await user.matchPassword(currentPassword))) {
+    if (requiresCurrentPassword && !(await user.matchPassword(currentPassword))) {
       return res.status(401).json({ success: false, message: 'Current password is incorrect' });
     }
 
