@@ -50,18 +50,9 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/hostels', require('./routes/hostelRoutes'));
 
-// Frontend static files for admin panel
-app.use(express.static(path.join(__dirname, 'frontend')));
+// API Root Route
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
-app.get('/:page', (req, res, next) => {
-  const allowedPages = ['login.html', 'forgot-password.html', 'dashboard.html', 'hostels.html', 'hostel.html', 'users.html', 'ratings.html', 'bookings.html', 'logs.html', 'settings.html'];
-  const page = req.params.page;
-  if (allowedPages.includes(page)) {
-    return res.sendFile(path.join(__dirname, 'frontend', page));
-  }
-  next();
+  res.status(200).json({ status: 'API is running successfully', service: 'stayinhostel-admin-server' });
 });
 
 // Base Health Check Endpoint
