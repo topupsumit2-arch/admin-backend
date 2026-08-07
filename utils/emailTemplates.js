@@ -69,7 +69,7 @@ const emailTemplates = {
           <li>Role: ${role}</li>
         </ul>
         <p>For security reasons, you will be asked to change your password on first login.</p>
-        <a href="${process.env.CLIENT_URL}/admin/login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+        <a href="https://admin.stayinhostel.com" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
           Login to Admin Panel
         </a>
         <p>Best regards,<br/>Stay In Hostel Team</p>
