@@ -1,40 +1,15 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const logger = require('../config/logger');
 
-const RESEND_HOST = process.env.RESEND_HOST || 'smtp.resend.com';
-const RESEND_PORT = Number(process.env.RESEND_PORT || 587);
-const RESEND_SECURE = RESEND_PORT === 465;
-const RESEND_USERNAME = process.env.RESEND_USERNAME || 'resend';
-const RESEND_PASSWORD = process.env.RESEND_PASSWORD || process.env.RESEND_API_KEY || '';
+const apiKey = process.env.RESEND_API_KEY || process.env.RESEND_PASSWORD || '';
+const resend = new Resend(apiKey);
 
-const transporter = nodemailer.createTransport({
-  host: RESEND_HOST,
-  port: RESEND_PORT,
-  secure: RESEND_SECURE,
-  auth: {
-    user: RESEND_USERNAME,
-    pass: RESEND_PASSWORD
-  },
-  requireTLS: true,
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
-const hasResendCredentials = Boolean(RESEND_PASSWORD && RESEND_PASSWORD !== 'your_resend_api_key');
+const hasResendCredentials = Boolean(apiKey && apiKey !== 'your_resend_api_key');
 
 if (hasResendCredentials) {
-  transporter.verify((error, success) => {
-    if (error) {
-      logger.error('Resend connection error:', error);
-      logger.error(`Resend config check failed: host=${RESEND_HOST}, port=${RESEND_PORT}, secure=${RESEND_SECURE}`);
-    } else {
-      logger.info('Resend connection successful');
-      logger.info(`Resend config: host=${RESEND_HOST}, port=${RESEND_PORT}, secure=${RESEND_SECURE}`);
-    }
-  });
+  logger.info('Resend HTTP API client initialized successfully');
 } else {
-  logger.warn('Resend SMTP credentials are not configured correctly. Add RESEND_API_KEY / RESEND_PASSWORD and restart the server.');
+  logger.warn('Resend API key is not configured correctly. Add RESEND_API_KEY and restart the server.');
 }
 
 /**
@@ -46,16 +21,25 @@ if (hasResendCredentials) {
  */
 const sendEmail = async (to, subject, html) => {
   try {
-    const mailOptions = {
-      from: `${process.env.RESEND_FROM_NAME || 'Stay In Hostel'} <${process.env.RESEND_FROM_EMAIL || 'noreply@stayinhostel.com'}>`,
-      to,
+    if (!hasResendCredentials) {
+      throw new Error('Resend API key is missing or invalid.');
+    }
+
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@stayinhostel.com';
+    const fromName = process.env.RESEND_FROM_NAME || 'Stay In Hostel';
+    
+    // Format "Name <email@domain.com>" properly for Resend API
+    const fromField = `${fromName} <${fromEmail}>`;
+
+    const data = await resend.emails.send({
+      from: fromField,
+      to: [to],
       subject,
       html
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    logger.info(`Email sent successfully to ${to}`, { messageId: info.messageId });
-    return { success: true, messageId: info.messageId };
+    logger.info(`Email sent successfully to ${to}`, { id: data.id || data.data?.id });
+    return { success: true, messageId: data.id || data.data?.id };
   } catch (error) {
     logger.error(`Failed to send email to ${to}:`, error);
     return { success: false, error: error.message };
@@ -98,5 +82,5 @@ module.exports = {
   sendEmail,
   sendBulkEmail,
   sendTemplateEmail,
-  transporter
+  transporter: null // Kept as null for backwards compatibility in case other files reference it
 };
