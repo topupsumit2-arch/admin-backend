@@ -41,9 +41,9 @@ const buildError = (max, retryAfterMs) => {
   };
 };
 
-const createRateLimiter = ({ name, max, windowMs, getEmail }) => {
+const createRateLimiter = ({ name, max, windowMs, getIdentifier }) => {
   return (req, res, next) => {
-    const email = String(getEmail(req) || 'unknown_email').trim().toLowerCase();
+    const email = String(getIdentifier(req) || 'unknown_email').trim().toLowerCase();
     const emailKey = trimKey(`${name}:email:${email}`);
 
     const emailResult = recordAttempt(emailKey, max, windowMs);
@@ -65,21 +65,21 @@ const loginLimiter = createRateLimiter({
   name: 'login',
   max: 4,
   windowMs: 60 * 60 * 1000,
-  getEmail: (req) => req.body.email
+  getIdentifier: (req) => req.body?.email || req.query?.email || req.headers['x-user-email'] || req.user?.email
 });
 
 const forgotPasswordLimiter = createRateLimiter({
   name: 'forgot_password',
   max: 4,
   windowMs: 60 * 60 * 1000,
-  getEmail: (req) => req.body.email
+  getIdentifier: (req) => req.body?.email || req.query?.email || req.headers['x-user-email']
 });
 
 const resetPasswordLimiter = createRateLimiter({
   name: 'reset_password',
   max: 3,
   windowMs: 60 * 60 * 1000,
-  getEmail: (req) => req.body.email
+  getIdentifier: (req) => req.body?.email || req.body?.emailAddress || req.query?.email || req.headers['x-user-email']
 });
 
 setInterval(() => {
